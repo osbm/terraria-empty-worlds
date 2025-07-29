@@ -1,0 +1,93 @@
+name: Generate and Release Terraria Empty Worlds
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  generate-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build project
+      run: cargo build --release
+
+    - name: Clean existing world files
+      run: rm -f *.wld
+
+    - name: Generate world files
+      run: cargo run --release
+
+    - name: Verify generated files
+      run: |
+        echo "Generated world files:"
+        ls -la *.wld
+        echo ""
+        echo "File count: $(ls *.wld | wc -l)"
+
+    - name: Upload artifacts (for PR builds)
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v3
+      with:
+        name: terraria-world-files
+        path: "*.wld"
+
+    - name: Create release tag
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      id: tag
+      run: |
+        TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Generated tag: $TAG"
+
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        name: "Terraria Empty Worlds ${{ steps.tag.outputs.tag }}"
+        body: |
+          🌍 Automatically generated Terraria empty world files
+
+          This release contains pre-generated empty world files for all combinations of:
+          - **Sizes**: small, medium, large
+          - **Difficulties**: journey, classic, expert, master
+          - **Corruption types**: crimson, corruption
+
+          **Total files**: 24 world files (.wld)
+
+          📋 **Usage Instructions**:
+          1. Download the world file(s) you need
+          2. Place them in your Terraria worlds folder:
+             - Windows: `%USERPROFILE%\Documents\My Games\Terraria\Worlds`
+             - macOS: `~/Library/Application Support/Terraria/Worlds`
+             - Linux: `~/.local/share/Terraria/Worlds`
+          3. Launch Terraria and select the world from the world selection screen
+
+          Generated from commit: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          Build date: $(date +'%Y-%m-%d %H:%M:%S UTC')
+        files: |
+          *.wld
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
