@@ -287,9 +287,9 @@ dependencies = [
 
 [[package]]
 name = "terraria-world"
-version = "1.2.0"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2be06537c3abef23ddfeb01b77090b513dc50788c8f2bfde1eed53a972b54ec"
+checksum = "478281ae36e45479e30fa90165e17789fba982f1abe7a45db73ec58fef0ca941"
 dependencies = [
  "chrono",
  "once_cell",
